@@ -113,18 +113,18 @@ With this Llama3 should be running on your local machine. Once you run Llama3 yo
 
     {
     "results": [
-        {
-            "term": "Urinary  incontinent",
-            "system ": "SNOMED CT",
-            "code ": "165232002",
-            "text": "Urinary incontinence (finding)",
-            "Retrival Method": "Used Llama3 to get the term",
-            "url": "https://browser.ihtsdotools.org/?perspective=full&conceptId1=165232002&edition=MAIN/2024-08-01&release=&languages=en",
-            "ICD10_code": "R32",
-            "Mapping_advice": "ALWAYS R32"
-        }
-    ]
-}
+           {
+               "term": "Urinary  incontinent",
+               "system ": "SNOMED CT",
+               "code ": "165232002",
+               "text": "Urinary incontinence (finding)",
+               "Retrival Method": "Used Llama3 to get the term",
+               "url": "https://browser.ihtsdotools.org/?perspective=full&conceptId1=165232002&edition=MAIN/2024-08-01&release=&languages=en",
+               "ICD10_code": "R32",
+               "Mapping_advice": "ALWAYS R32"
+           }
+       ]
+   }
 
 
 
