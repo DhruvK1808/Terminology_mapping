@@ -129,6 +129,7 @@ def run_ollama_medllama2(query):
         print("An error occurred:", e)
         return None
 
+#This function gets me the code we search for the term on snowstorm
 def get_concept_id(name):
     url = f"http://localhost:8080/MAIN/concepts?term={name}"
     try:
@@ -138,43 +139,52 @@ def get_concept_id(name):
             matched_concepts = []
             synonym_concept_mapping = {}
 
-            # First pass: Check FSNs and collect potential matches
-            for item in data['items']:
-                if 'fsn' in item and 'term' in item['fsn']:
-                    fsn_term = re.sub(r'\(.*?\)', '', item['fsn']['term'].lower())
+            if data['total'] != 0:
+                # First pass: Check FSNs and collect potential matches
+                for item in data['items']:
+                    if 'fsn' in item and 'term' in item['fsn']:
+                        fsn_term = re.sub(r'\(.*?\)', '', item['fsn']['term'].lower())
+                        if check_fsn_type(item['conceptId']) and item['active']:
+                            matched_concepts.append((fsn_term, item['conceptId']))
+                            if name.lower() == fsn_term:
+                                return item['conceptId']
+    
+                # Second pass: Check synonyms if FSN did not match exactly
+                for item in data['items']:
                     if check_fsn_type(item['conceptId']) and item['active']:
-                        matched_concepts.append((fsn_term, item['conceptId']))
-                        if name.lower() == fsn_term:
-                            return item['conceptId']
+                        synonyms = get_display_name_from_snowstorm(item['conceptId'])
+                        for synonym in synonyms:
+                            synonym_term = synonym.lower()
+                            synonym_concept_mapping[synonym_term] = item['conceptId']
+                            if name.lower() == synonym_term:
+                                return item['conceptId']
+    
+                # Third pass: Check if the name is a subset of any synonyms
+                for synonym_term, concept_id in synonym_concept_mapping.items():
+                    if name.lower() in synonym_term:
+                        return concept_id
 
-            # Second pass: Check synonyms if FSN did not match exactly
-            for item in data['items']:
-                if check_fsn_type(item['conceptId']) and item['active']:
-                    synonyms = get_display_name_from_snowstorm(item['conceptId'])
-                    for synonym in synonyms:
-                        synonym_term = synonym.lower()
-                        synonym_concept_mapping[synonym_term] = item['conceptId']
-                        if name.lower() == synonym_term:
-                            return item['conceptId']
-
-            # Third pass: Check if the name is a subset of any synonyms
-            for synonym_term, concept_id in synonym_concept_mapping.items():
-                if name.lower() in synonym_term:
-                    return concept_id
-
-            # Send all synonyms to Llama for semantic comparison
-                synonyms_list = list(synonym_concept_mapping.keys())
-                query = f"Which of these terms is the closest in meaning to '{name}': {', '.join(synonyms_list)}? Provide the answer in the format [closest term] or [None]."
+                # Send only FSN names to Llama for semantic comparison if no synonym matches
+                fsn_list = [fsn for fsn, _ in matched_concepts]
+                query = f"Which of these FSN terms is the closest in meaning to '{name}': {', '.join(fsn_list)}? Provide the answer in the format (in ['']) ['closest term'] or ['None']."
+                print(query)
                 result = run_ollama_medllama2(query)
-                
-                # Parse the result to find the closest synonym or None
-                match = re.search(r'\[(.*?)\]', result)
+                print(result)
+                    
+               # Parse the result to find the closest FSN or None
+                print(matched_concepts)
+                match = re.search(r"\['(.*?)'\]", result)
                 if match:
                     closest_term = match.group(1).strip().lower()
+                    print(closest_term)
                     if closest_term != "none":
-                        return synonym_concept_mapping.get(closest_term, None)
-                
-                # If Llama returns 'None' or no match is found, proceed to the next step or return None
+                        # Find the concept ID corresponding to the closest FSN term
+                        for fsn_term, concept_id in matched_concepts:
+                            if closest_term == fsn_term.strip():
+                                return concept_id
+                    
+                # If Llama returns 'None' or no match is found, return None
+                print("none")
                 return None
         else:
             print(f"Concept ID not found for diagnostic name '{name}'")
